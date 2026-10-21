@@ -13,6 +13,7 @@ import simpy
 from lib.core.common import find_random_position
 from lib.core.config import Config
 from lib.core.state import SimulationState, SimulationDataTracking
+from lib.energy.profiles import load_hardware
 from lib.mesh.mac import set_transmit_delay, get_retransmission_msec
 from lib.mesh.packet import NODENUM_BROADCAST, MeshPacket, MeshMessage
 from lib.radio.node import RadioNode, RadioNodeConfig
@@ -63,7 +64,7 @@ class MeshNodeStats:
 class NodeConfig(RadioNodeConfig):
     """Specific configuration for a Meshtastic node
     """
-    def __init__(self, node_id: int, position: Point, period: int, tx_power: int, freq: float, role: MESHTASTIC_ROLE = MESHTASTIC_ROLE.CLIENT, antenna_gain: float = 0, hop_limit: int = 3, neighbor_info: bool = False):
+    def __init__(self, node_id: int, position: Point, period: int, tx_power: int, freq: float, role: MESHTASTIC_ROLE = MESHTASTIC_ROLE.CLIENT, antenna_gain: float = 0, hop_limit: int = 3, neighbor_info: bool = False, device=None):
         """Initial configuration of a node
 
         Arguments:
@@ -76,8 +77,9 @@ class NodeConfig(RadioNodeConfig):
         antenna_gain -- antenna gain in dBi. Default 0
         hop_limit -- hop limit. Default 3
         neighbor_info -- if neighbor info is enabled. Default False
+        device -- hardware Device for energy accounting. Default None
         """
-        super().__init__(node_id, position, tx_power, freq, antenna_gain)
+        super().__init__(node_id, position, tx_power, freq, antenna_gain, device)
         self.period = period
         self.role = role
         self.hop_limit = hop_limit
@@ -405,6 +407,12 @@ def default_generate_node_list(conf: Config) -> [NodeConfig]:
 
     node_configs = []
 
+    # optional hardware for energy accounting. Its transmit power, antenna
+    # gain and height replace the config defaults.
+    device = None
+    if conf.DEFAULT_DEVICE is not None:
+        device = load_hardware(conf.HARDWARE_FILES).device(conf.DEFAULT_DEVICE)
+
     # replicate default 'no prior config' setup:
     for i in range(conf.NR_NODES):
         # no specified node config, randomly generate one
@@ -429,6 +437,11 @@ def default_generate_node_list(conf: Config) -> [NodeConfig]:
             role = MESHTASTIC_ROLE.CLIENT
 
         # make NodeConfig object to pass to MeshNode constructor
-        node_configs.append(NodeConfig(i, position, conf.PERIOD, conf.PTX, conf.FREQ, role))
+        if device is None:
+            node_configs.append(NodeConfig(i, position, conf.PERIOD, conf.PTX, conf.FREQ, role))
+        else:
+            position = Point(position.x, position.y, device.height_m)
+            node_configs.append(NodeConfig(i, position, conf.PERIOD, device.tx_dbm, conf.FREQ, role,
+                                           antenna_gain=device.gain_dbi, device=device))
 
     return node_configs

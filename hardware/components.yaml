@@ -1,0 +1,70 @@
+# Current draw of each hardware component, for energy accounting.
+#
+# Fill the null values from the datasheets named in `source`. A null value is
+# allowed: the simulation still runs and reports time in each state, but the
+# energy of that state (and every total that includes it) is reported as NaN
+# and listed under "missing" in the results.
+#
+# Fields:
+#   kind           radio | concentrator | mcu | mcu_radio | host | modem | sensor
+#   voltage_v      supply voltage the currents are measured at
+#   current_ma     current in mA for each named state. Radios need at least `rx`.
+#   tx_current_ma  radios only: transmit current in mA per output power in dBm.
+#                  Linearly interpolated between points. Powers below the lowest
+#                  point use the lowest point; powers above the highest are an error.
+#   event_energy_mj  energy in mJ of one-off events, e.g. sending one LTE-M message
+#   source         where the numbers come from
+
+components:
+  sx1262:
+    kind: radio
+    voltage_v: 3.3
+    source: "Semtech SX1261/2 datasheet, section 3.4 (DC-DC mode)"
+    current_ma: {sleep: null, standby: null, rx: null, cad: null}
+    tx_current_ma: {14: null, 17: null, 20: null, 22: null}
+
+  sx1276:
+    kind: radio
+    voltage_v: 3.3
+    source: "Semtech SX1276/77/78/79 datasheet, table 6 (power consumption)"
+    current_ma: {sleep: null, standby: null, rx: null, cad: null}
+    tx_current_ma: {13: null, 17: null, 20: null}
+
+  sx1302_sx1250:
+    kind: concentrator
+    voltage_v: 5.0
+    source: "Semtech SX1302 datasheet + SX1250 datasheet, or a reference gateway (e.g. RAK2287) power spec"
+    current_ma: {idle: null, rx: null}
+    tx_current_ma: {27: null}
+
+  stm32wl:
+    kind: mcu_radio
+    voltage_v: 3.3
+    source: "STM32WLE5 datasheet (DS13105), or Seeed Wio-E5 module spec"
+    current_ma: {sleep: null, standby: null, rx: null}
+    tx_current_ma: {14: null}
+
+  nrf52840:
+    kind: mcu
+    voltage_v: 3.3
+    source: "Nordic nRF52840 product specification, section 5.2 (current consumption)"
+    current_ma: {sleep: null, idle: null, active: null}
+
+  rp2040:
+    kind: mcu
+    voltage_v: 3.3
+    source: "Raspberry Pi RP2040 datasheet, section 5.6 (power consumption)"
+    current_ma: {sleep: null, idle: null, active: null}
+
+  pi_zero_w:
+    kind: host
+    voltage_v: 5.0
+    source: "Measured or published Raspberry Pi Zero W idle current"
+    current_ma: {idle: null}
+
+  lte_m:
+    kind: modem
+    voltage_v: 3.8
+    source: "LTE-M module datasheet (e.g. Quectel BG95 or u-blox SARA-R4), PSM current and energy per uplink"
+    current_ma: {psm: null}
+    event_energy_mj: {uplink: null}

@@ -9,6 +9,7 @@ import math
 import random
 
 from lib.core.point import Point
+from lib.energy.meter import EnergyMeter
 from lib.radio.phy import estimate_path_loss
 
 logger = logging.getLogger(__name__)
@@ -16,19 +17,21 @@ logger = logging.getLogger(__name__)
 
 class RadioNodeConfig:
     """Radio configuration of a node."""
-    def __init__(self, node_id: int, position: Point, tx_power: int, freq: float, antenna_gain: float = 0):
+    def __init__(self, node_id: int, position: Point, tx_power: int, freq: float, antenna_gain: float = 0, device=None):
         """Arguments:
         node_id -- unique integer id of node (used as list index)
         position -- beginning Point(x, y, z) location of node
         tx_power -- transmit power in dBm
         freq -- frequency in Hz
         antenna_gain -- antenna gain in dBi. Default 0
+        device -- hardware Device for energy accounting. Default None: no energy metering
         """
         self.node_id = node_id
         self.position = position.copy()  # make sure we keep our own point
         self.tx_power = tx_power
         self.freq = freq
         self.antenna_gain = antenna_gain
+        self.device = device
 
     def compute_rssi_and_pathloss_to(self, rx_nodeconf, conf) -> (float, float):
         """Compute RSSI and pathloss from this node config as the transmitting node
@@ -83,6 +86,16 @@ class RadioNode:
         self.isMoving = False
         self.gpsEnabled = False
 
+        # radio state whenever the node is not transmitting
+        self.idle_radio_state = "rx"
+        device = getattr(node_config, "device", None)
+        self.meter = EnergyMeter(device, self.env.now, self.idle_radio_state) if device is not None else None
+
+    def set_radio_state(self, state: str, dbm: float = None):
+        """Record a radio state change for energy accounting."""
+        if self.meter is not None:
+            self.meter.set_radio_state(state, self.env.now, dbm)
+
     def sensitivity(self, tx) -> float:
         """Weakest RSSI (dBm) at which this node can receive `tx`."""
         return self.conf.current_preset["sensitivity"]
@@ -102,8 +115,10 @@ class RadioNode:
         self.txAirUtilization += tx.timeOnAir
         self.airUtilization += tx.timeOnAir
         self.isTransmitting = True
+        self.set_radio_state("tx", tx.txpow)
         yield self.env.timeout(tx.timeOnAir)
         self.isTransmitting = False
+        self.set_radio_state(self.idle_radio_state)
 
     def receive(self, in_pipe):
         """Process: track the start and end of every transmission on the medium,

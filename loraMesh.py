@@ -62,6 +62,7 @@ def parse_params(conf, args=None) -> [NodeConfig]:
     parser.add_argument('--period-seconds', type=float, help='Override mean message-generation period in seconds')
     parser.add_argument('--no-gui', action='store_true', help='Run without Tk/Matplotlib graphing or schedule plotting')
     parser.add_argument('--disable-connectivity-map', action='store_true', help='disable the connectivity map optimization. May be faster for some scenarios with many moving nodes and/or a densely connected network.')
+    parser.add_argument('--device', type=str, help='Hardware device (from hardware/devices.yaml) to give every generated node, for energy accounting. Only with nr_nodes')
     parser.add_argument('-v', '--verbose', action='store_true', help='enable verbose/debug output')
 
     parsed_arguments = parser.parse_args(args)
@@ -97,6 +98,9 @@ def parse_params(conf, args=None) -> [NodeConfig]:
 
     if parsed_arguments.from_file is not None and parsed_arguments.router_type is not None:
         parser.error("Incompatible argument selection. --from-file and --router-type can not be used together")
+    if parsed_arguments.device is not None and parsed_arguments.nr_nodes is None:
+        parser.error("--device needs nr_nodes")
+    conf.DEFAULT_DEVICE = parsed_arguments.device
 
     seeded_for_scenario = False
     if parsed_arguments.from_file is not None:
@@ -231,6 +235,13 @@ def run_simulation(conf, node_config):
         gpsEnabled = results['gpsEnabled']
         print("Number of moving nodes:", movingNodes)
         print("Number of moving nodes w/ GPS:", gpsEnabled)
+
+    if "energyTotal_mJ" in results.results:
+        nodes = results["nodes"]
+        print("Total energy (J):", round(results["energyTotal_mJ"] / 1000, 3))
+        print("Average energy per node (J):", round(results["energyTotal_mJ"] / 1000 / len(nodes), 3))
+        if results["energyMissing"]:
+            print("Energy is NaN because these hardware values are not filled in yet:", ", ".join(results["energyMissing"]))
 
     if graph is not None:
         graph.save()

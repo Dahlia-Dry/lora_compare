@@ -409,6 +409,14 @@ class Config:
         self.LEGACY_COLLISION_TIMING = False #seems like there was an error in the collision timing in the original Meshtasticator code
         ### End of PHY parameters ###
 
+        # Energy accounting
+        # Name of a device in the hardware YAML (e.g. "rak4631") to give every
+        # generated node, or None for no energy metering.
+        self.DEFAULT_DEVICE = None
+        # Hardware YAML files to load devices from. None: hardware/components.yaml and hardware/devices.yaml
+        self.HARDWARE_FILES = None
+        # End of energy accounting
+
         # Misc
         self.SEED = 44  # random seed to use
         # End of misc

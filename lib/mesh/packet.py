@@ -35,7 +35,7 @@ class MeshPacket(Transmission):
 
         preset = conf.current_preset
         super().__init__(conf, medium, txNodeId, preset["sf"], preset["cr"], preset["bw"], conf.FREQ,
-                         conf.PTX, plen, conf.HEADERLENGTH, now)
+                         medium.nodes[txNodeId].node_conf.tx_power, plen, conf.HEADERLENGTH, now)
 
         # Routing
         self.retransmissions = self.conf.maxRetransmission

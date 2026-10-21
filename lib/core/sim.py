@@ -102,6 +102,11 @@ class SimulationResults:
             noLinkRate = self.results["noLinks"] / self.results["totalPairs"]
             self.results["noLinkRate"] = noLinkRate
 
+        energy = self.results.get("energy") or {}
+        if energy:
+            self.results["energyTotal_mJ"] = sum(r["total_mJ"] for r in energy.values())
+            self.results["energyMissing"] = sorted({m for r in energy.values() for m in r["missing"]})
+
         if conf.MOVEMENT_ENABLED:
             self.results["movingNodes"] = sum([1 for n in nodes if n.isMoving is True])
             self.results["gpsEnabled"] = sum([1 for n in nodes if n.gpsEnabled is True])
@@ -192,6 +197,8 @@ class DiscreteEventSim:
             "totalPairs": self.data_tracking.totalPairs,
             "noLinks": self.data_tracking.noLinks,
             "nodes": self.mutated_state.nodes,
+            # per-node energy report, for nodes that have a hardware device
+            "energy": {n.nodeid: n.meter.report(self.env.now) for n in self.mutated_state.nodes if n.meter is not None},
         }
         results = SimulationResults(first_order_results)
         results.finalize(self.conf)

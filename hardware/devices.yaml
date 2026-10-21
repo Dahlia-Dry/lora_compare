@@ -1,0 +1,51 @@
+# Devices built from the components in components.yaml.
+#
+# Fields:
+#   radio      component whose state follows the node's radio (rx, tx, sleep...)
+#   baseline   every other component, with the state it stays in for the whole run
+#   tx_dbm     transmit power in dBm
+#   gain_dbi   antenna gain in dBi
+#   height_m   antenna height in m
+#
+# Experiments can override tx_dbm, gain_dbi and height_m per node type.
+
+devices:
+  wio_e5:
+    description: "LoRaWAN sensor: Seeed Wio-E5 (STM32WL)"
+    radio: stm32wl
+    baseline: {}
+    tx_dbm: 14
+    gain_dbi: 0
+    height_m: 1
+
+  rak4631:
+    description: "Meshtastic node: RAK4631 (SX1262 + nRF52840)"
+    radio: sx1262
+    baseline: {nrf52840: idle}
+    tx_dbm: 22
+    gain_dbi: 0
+    height_m: 1
+
+  t_echo:
+    description: "Responder handheld: LilyGO T-Echo (SX1262 + nRF52840)"
+    radio: sx1262
+    baseline: {nrf52840: idle}
+    tx_dbm: 22
+    gain_dbi: 0
+    height_m: 1.5
+
+  sx1302_gw:
+    description: "LoRaWAN gateway / hybrid concentrator: SX1302 + Pi Zero W + LTE-M backhaul"
+    radio: sx1302_sx1250
+    baseline: {pi_zero_w: idle, lte_m: psm}
+    tx_dbm: 27
+    gain_dbi: 3
+    height_m: 2
+
+  cohost:
+    description: "Hybrid co-host: SX1276 + RP2040 running Meshtastic"
+    radio: sx1276
+    baseline: {rp2040: idle}
+    tx_dbm: 20
+    gain_dbi: 3
+    height_m: 2
