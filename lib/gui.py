@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import yaml
 from matplotlib.widgets import Button, Slider, RadioButtons, TextBox
 
-from lib import phy
+from lib.radio import phy
 
 try:
     matplotlib.use("TkAgg")

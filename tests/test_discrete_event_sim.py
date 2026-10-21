@@ -1,7 +1,7 @@
 import random
 import unittest
 
-import lib.discrete_event_sim
+import lib.core.sim
 
 class TestDiscreteEventSim(unittest.TestCase):
     '''manually replicate a 10-node default configuration discrete sim test as
@@ -22,7 +22,7 @@ class TestDiscreteEventSim(unittest.TestCase):
         rudimentary testing with mock types, since it expects lists of
         MeshNode and MeshPacket objects.
         """
-        from lib.config import CONFIG
+        from lib.core.config import CONFIG
         conf = CONFIG
 
         # nodes must have attributes:
@@ -111,7 +111,7 @@ class TestDiscreteEventSim(unittest.TestCase):
         r['totalPairs'] = 3
         r['noLinks'] = 0
 
-        sim_results = lib.discrete_event_sim.SimulationResults(r)
+        sim_results = lib.core.sim.SimulationResults(r)
         sim_results.finalize(conf)
 
         # test computations done by finalize, sanity checks
@@ -142,9 +142,9 @@ class TestDiscreteEventSim(unittest.TestCase):
         self.assertEqual(sim_results['gpsEnabled'], 1, 'expected number of gps enabled nodes')
 
     def test_connectivity_map_optimization_is_consistent(self):
-        from lib.node import default_generate_node_list
+        from lib.mesh.node import default_generate_node_list
 
-        from lib.config import CONFIG
+        from lib.core.config import CONFIG
         conf = CONFIG
 
         all_results = []
@@ -170,7 +170,7 @@ class TestDiscreteEventSim(unittest.TestCase):
             # skipping GUI graphing to speed things up
 
             # set up sim
-            sim = lib.discrete_event_sim.DiscreteEventSim(conf, nodeConfig)
+            sim = lib.core.sim.DiscreteEventSim(conf, nodeConfig)
             sim.run_simulation()
 
             # collect & unpack results for easy copy/paste of asserts
@@ -206,9 +206,9 @@ class TestDiscreteEventSim(unittest.TestCase):
     def test_discrete_sim_ten_nodes(self):
         import numpy as np
 
-        from lib.node import default_generate_node_list
+        from lib.mesh.node import default_generate_node_list
 
-        from lib.config import CONFIG
+        from lib.core.config import CONFIG
         conf = CONFIG
 
         # crucial!! and perhaps a tad fragile
@@ -223,7 +223,7 @@ class TestDiscreteEventSim(unittest.TestCase):
         # skipping GUI graphing to speed things up
 
         # set up sim
-        sim = lib.discrete_event_sim.DiscreteEventSim(conf, nodeConfig)
+        sim = lib.core.sim.DiscreteEventSim(conf, nodeConfig)
         sim.run_simulation()
 
         # collect & unpack results for easy copy/paste of asserts
@@ -287,10 +287,10 @@ class TestDiscreteEventSim(unittest.TestCase):
     def test_sim_does_not_change_config(self):
         import copy
 
-        from lib.node import default_generate_node_list
+        from lib.mesh.node import default_generate_node_list
 
         # get default config, set node number
-        from lib.config import CONFIG
+        from lib.core.config import CONFIG
         conf = CONFIG
 
         # copied from the 10-node test just because, but not necessary
@@ -305,7 +305,7 @@ class TestDiscreteEventSim(unittest.TestCase):
         old_conf = copy.deepcopy(conf)
 
         # set up and run sim
-        sim = lib.discrete_event_sim.DiscreteEventSim(conf, nodeConfig)
+        sim = lib.core.sim.DiscreteEventSim(conf, nodeConfig)
         sim.run_simulation()
 
         # go through the full sim lifecycle, to cover everywhere that may touch config

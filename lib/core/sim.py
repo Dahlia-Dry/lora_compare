@@ -10,14 +10,14 @@ from typing import TYPE_CHECKING
 from simpy import Environment as SimpyEnvironment
 import numpy as np
 
-from lib.config import Config
-from lib.discrete_event_sim_components import SimulationState, SimulationDataTracking
-from lib.node import MeshNode, NodeConfig
+from lib.core.config import Config
+from lib.core.state import SimulationState, SimulationDataTracking
+from lib.mesh.node import MeshNode, NodeConfig
 
 if TYPE_CHECKING:
     from lib.gui import Graph
-from lib.packet import MeshPacket
-from lib.phy import estimate_path_loss
+from lib.mesh.packet import MeshPacket
+from lib.radio.phy import estimate_path_loss
 
 logger = logging.getLogger(__name__)
 

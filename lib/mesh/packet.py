@@ -5,8 +5,8 @@ an application-level message that may be carried by several packets.
 import logging
 import random
 
-from lib.discrete_event_sim_components import Counter
-from lib.phy import airtime, estimate_path_loss
+from lib.core.state import Counter
+from lib.radio.phy import airtime, estimate_path_loss
 
 NODENUM_BROADCAST = 0xFFFFFFFF
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class MeshPacket:
     unique_packet_counter = Counter()
-    asym_rng = random.Random(44) # same default seed as in lib/config.py
+    asym_rng = random.Random(44) # same default seed as in lib/core/config.py
 
     @staticmethod
     def seed_asym_rng(seed):

@@ -5,7 +5,7 @@ delays.
 import logging
 import random
 
-from lib.phy import airtime, get_current_slot_time
+from lib.radio.phy import airtime, get_current_slot_time
 
 logger = logging.getLogger(__name__)
 

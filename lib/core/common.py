@@ -7,8 +7,8 @@ import os
 
 import numpy as np
 
-from lib import phy
-from lib.point import Point
+from lib.radio import phy
+from lib.core.point import Point
 
 def find_random_position(conf, node_configs) -> (float, float):
     """Given a simulation config and list of existing node configs/nodes, find a
@@ -56,7 +56,7 @@ def find_random_position(conf, node_configs) -> (float, float):
             break
     return max(-conf.XSIZE/2, position.x), max(-conf.YSIZE/2, position.y)
 
-# TODO: once lib/interactive no longer uses this, we can remove this and put all distance calculation in Point
+# TODO: once lib/mesh/interactive no longer uses this, we can remove this and put all distance calculation in Point
 def calc_dist(x0, x1, y0, y1, z0=0, z1=0):
     return np.sqrt(((abs(x0-x1))**2)+((abs(y0-y1))**2)+((abs(z0-z1)**2)))
 

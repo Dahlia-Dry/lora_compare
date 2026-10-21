@@ -9,7 +9,7 @@ import tempfile
 import textwrap
 import unittest
 
-from lib.config import Config
+from lib.core.config import Config
 
 import loraMesh
 

@@ -1,6 +1,6 @@
 import unittest
 
-import lib.discrete_event_sim_components as dsc
+import lib.core.state as dsc
 
 class TestDiscreteSimComponents(unittest.TestCase):
     '''Mostly sanity-checking of very simple sim components

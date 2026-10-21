@@ -7,8 +7,8 @@ import random
 
 import yaml
 
-from lib.config import CONFIG
-from lib.node import NodeConfig, default_generate_node_list
+from lib.core.config import CONFIG
+from lib.mesh.node import NodeConfig, default_generate_node_list
 
 conf = CONFIG
 logger = logging.getLogger(__name__)
@@ -169,7 +169,7 @@ def run_simulation(conf, node_config):
     # Keep the heavier simulation/GUI import out of module import. That makes
     # CLI parsing unit-testable and lets CI/tools import loraMesh without
     # starting Matplotlib/Tk plumbing as a side effect.
-    from lib.discrete_event_sim import DiscreteEventSim
+    from lib.core.sim import DiscreteEventSim
 
     conf.update_router_dependencies()
     if conf.GUI_ENABLED:

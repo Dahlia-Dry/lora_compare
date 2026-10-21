@@ -5,9 +5,9 @@ import copy
 import random
 import timeit
 
-from lib.config import CONFIG
-from lib.discrete_event_sim import DiscreteEventSim
-from lib.node import NodeConfig, default_generate_node_list
+from lib.core.config import CONFIG
+from lib.core.sim import DiscreteEventSim
+from lib.mesh.node import NodeConfig, default_generate_node_list
 
 conf = CONFIG
 

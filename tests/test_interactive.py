@@ -6,7 +6,7 @@ import threading
 import types
 import unittest
 
-from lib.interface_close import InterfaceCloseTimeout, close_interface
+from lib.mesh.interface_close import InterfaceCloseTimeout, close_interface
 
 
 class Graph:
@@ -14,14 +14,14 @@ class Graph:
 
 
 def load_interactive_sim():
-    """Load interactive.py with a GUI stub without poisoning lib.interactive."""
+    """Load interactive.py with a GUI stub without poisoning lib.mesh.interactive."""
     module_name = "_interactive_shutdown_test"
     gui_stub = types.ModuleType("lib.gui")
     gui_stub.Graph = Graph
     gui_stub.gen_scenario = lambda conf: []
     previous_gui = sys.modules.get("lib.gui")
     sys.modules["lib.gui"] = gui_stub
-    module_path = os.path.join(os.path.dirname(__file__), "..", "lib", "interactive.py")
+    module_path = os.path.join(os.path.dirname(__file__), "..", "lib", "mesh", "interactive.py")
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     module = importlib.util.module_from_spec(spec)
     try:

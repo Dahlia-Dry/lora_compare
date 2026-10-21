@@ -1,10 +1,10 @@
 """Shared simulation state objects (message counter, simulation state and
-data tracking) split out of discrete_event_sim to avoid circular imports.
+data tracking) split out of lib.core.sim to avoid circular imports.
 """
 from simpy import Environment as SimpyEnvironment
 
-from lib.config import Config
-from lib.discrete_event import BroadcastPipe
+from lib.core.config import Config
+from lib.core.discrete_event import BroadcastPipe
 
 # This is where we put components of DiscreteEventSim that need to be referenced
 # by other classes, to avoid circular imports

@@ -23,12 +23,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import TextBox
 
-from lib.config import Config
-import lib.phy as phy
-from lib.common import find_random_position
+from lib.core.config import Config
+import lib.radio.phy as phy
+from lib.core.common import find_random_position
 from lib.gui import gen_scenario, Graph
-from lib.interface_close import InterfaceCloseTimeout, close_interface
-from lib.point import Point
+from lib.mesh.interface_close import InterfaceCloseTimeout, close_interface
+from lib.core.point import Point
 
 logger = logging.getLogger(__name__)
 

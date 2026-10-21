@@ -14,13 +14,13 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-from lib.config import Config
-from lib.common import find_random_position, setup_asymmetric_links
-from lib.discrete_event import BroadcastPipe, sim_report
-from lib.discrete_event_sim import DiscreteEventSim
+from lib.core.config import Config
+from lib.core.common import find_random_position, setup_asymmetric_links
+from lib.core.discrete_event import BroadcastPipe, sim_report
+from lib.core.sim import DiscreteEventSim
 from lib.gui import Graph, run_graph_updates
-from lib.node import NodeConfig
-from lib.point import Point
+from lib.mesh.node import NodeConfig
+from lib.core.point import Point
 
 # TODO - There should really be two separate concepts here, a STATE and a CONFIG
 # today, the config also maintains state

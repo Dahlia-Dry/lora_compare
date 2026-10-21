@@ -6,7 +6,7 @@ import logging
 import math
 import random
 
-from lib.config import CONFIG
+from lib.core.config import CONFIG
 
 # TODO: if our config deviates from the default, we WILL get incorrect results.
 # refactor things to take a config object

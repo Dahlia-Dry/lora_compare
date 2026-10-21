@@ -1,8 +1,8 @@
 import unittest
 
-import lib.common
+import lib.core.common
 
-from lib.point import Point
+from lib.core.point import Point
 
 class TestCommonFunctions(unittest.TestCase):
 
@@ -14,14 +14,14 @@ class TestCommonFunctions(unittest.TestCase):
         # y diff: 4
         p1 = (-1, -1)
         p2 = (2, 3)
-        self.assertEqual(lib.common.calc_dist(p1[0], p2[0], p1[1], p2[1]), 5.0, message)
+        self.assertEqual(lib.core.common.calc_dist(p1[0], p2[0], p1[1], p2[1]), 5.0, message)
 
         # (5, 12, 13)
         # x diff: 5
         # y diff: 12
         p1 = (-1, -1)
         p2 = (4, 11)
-        self.assertEqual(lib.common.calc_dist(p1[0], p2[0], p1[1], p2[1]), 13.0, message)
+        self.assertEqual(lib.core.common.calc_dist(p1[0], p2[0], p1[1], p2[1]), 13.0, message)
 
         # test some pythagorean quadruple cuboids https://en.wikipedia.org/wiki/Pythagorean_quadruple
         # (1, 2, 2, 3)
@@ -30,7 +30,7 @@ class TestCommonFunctions(unittest.TestCase):
         # z diff: 2
         p1 = (-1, -1, -1)
         p2 = (0, 1, 1)
-        self.assertEqual(lib.common.calc_dist(p1[0], p2[0], p1[1], p2[1], p1[2], p2[2]), 3.0, message)
+        self.assertEqual(lib.core.common.calc_dist(p1[0], p2[0], p1[1], p2[1], p1[2], p2[2]), 3.0, message)
 
         # (2, 3, 6, 7)
         # x diff: 2
@@ -38,18 +38,18 @@ class TestCommonFunctions(unittest.TestCase):
         # z diff: 6
         p1 = (-1, -1, -1)
         p2 = (1, 2, 5)
-        self.assertEqual(lib.common.calc_dist(p1[0], p2[0], p1[1], p2[1], p1[2], p2[2]), 7.0, message)
+        self.assertEqual(lib.core.common.calc_dist(p1[0], p2[0], p1[1], p2[1], p1[2], p2[2]), 7.0, message)
 
     def test_find_random_position(self):
         # mock up the needed objects
-        # conf: config from lib.config.Config(). Must have
+        # conf: config from lib.core.config.Config(). Must have
         # - XSIZE, YSIZE, OX, OY, MINDIST, FREQ, PTX, GL, current_preset property
         # - MODEL, LPLD0, GAMMA, D0
         # (just use an actual config object)
         # nodes: empty list OR list of nodes which must have:
         #  - x, y attributes
-        from lib.config import CONFIG
-        from lib.phy import estimate_path_loss
+        from lib.core.config import CONFIG
+        from lib.radio.phy import estimate_path_loss
 
         # TODO: iterate this test for each of our supported models, since they
         # change the return value of estimate_path_loss. Also, each LoRa preset
@@ -76,7 +76,7 @@ class TestCommonFunctions(unittest.TestCase):
         # - a position is always returned
 
         # first node case
-        position = lib.common.find_random_position(conf, nodes)
+        position = lib.core.common.find_random_position(conf, nodes)
         self.assertIsNotNone(position, "always return position")
         self.assertGreaterEqual(position[0], lower_bound_x, f"x within bounds {position=}")
         self.assertLessEqual(position[0], upper_bound_x, f"x within bounds {position=}")
@@ -86,14 +86,14 @@ class TestCommonFunctions(unittest.TestCase):
         # second node case
         n = MyNode(Point(0, 0, 0))
         nodes = [n]
-        position = lib.common.find_random_position(conf, nodes)
+        position = lib.core.common.find_random_position(conf, nodes)
         self.assertIsNotNone(position, "always return position")
         self.assertGreaterEqual(position[0], lower_bound_x, f"x within bounds {position=}")
         self.assertLessEqual(position[0], upper_bound_x, f"x within bounds {position=}")
         self.assertGreaterEqual(position[1], lower_bound_y, f"y within bounds {position=}")
         self.assertLessEqual(position[1], upper_bound_y, f"y within bounds {position=}")
 
-        distance = lib.common.calc_dist(n.position.x, position[0], n.position.y, position[1])
+        distance = lib.core.common.calc_dist(n.position.x, position[0], n.position.y, position[1])
         self.assertGreaterEqual(distance, conf.MINDIST, f"{position=} not within MINDIST of {n=}")
 
         # this directly replicates the logic from the function which I dislike.
