@@ -1,3 +1,7 @@
+"""Physical layer model: LoRa airtime, slot time, channel activity detection,
+collision checks (frequency, spreading factor, power, timing), path loss
+models and maximum range estimation.
+"""
 import logging
 import math
 import random

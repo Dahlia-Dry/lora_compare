@@ -1,3 +1,9 @@
+"""Interactive simulation mode, which runs real Meshtastic firmware
+(meshtasticd, natively or in Docker) for each node and connects to them
+over TCP. The simulator relays packets between nodes according to the
+modelled radio links, and a command-line interface lets the user send
+messages and inspect the network.
+"""
 import cmd
 import errno
 import socket

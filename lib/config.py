@@ -1,3 +1,7 @@
+"""Global simulation configuration: area size, radio/modem presets, regions,
+path loss model, Meshtastic defaults and router type. Exposes a single
+module-level `CONFIG` instance for all modules to share.
+"""
 from enum import Enum
 
 class Config:

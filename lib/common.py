@@ -1,3 +1,7 @@
+"""Shared helpers used across the simulator: random node placement within
+radio range of existing nodes, distance calculation, and setup of
+asymmetric link offsets between node pairs.
+"""
 import random
 import os
 

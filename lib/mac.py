@@ -1,3 +1,7 @@
+"""MAC layer timing ported from the Meshtastic firmware: contention window
+and SNR-weighted transmit delays for rebroadcasts, and retransmission
+delays.
+"""
 import logging
 import random
 

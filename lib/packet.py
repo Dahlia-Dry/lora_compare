@@ -1,3 +1,7 @@
+"""Packet and message models. `MeshPacket` represents one LoRa transmission
+and works out which nodes sense and receive it, and `MeshMessage` represents
+an application-level message that may be carried by several packets.
+"""
 import logging
 import random
 

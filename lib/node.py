@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""Simulated Meshtastic node. Defines device roles, per-node configuration
+(`NodeConfig`) and statistics, and `MeshNode`, the SimPy process that
+generates messages, transmits, receives and rebroadcasts packets. Also
+provides the default random node list generator.
+"""
 from enum import Enum
 import logging
 import math

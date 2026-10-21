@@ -1,3 +1,6 @@
+"""Shared simulation state objects (message counter, simulation state and
+data tracking) split out of discrete_event_sim to avoid circular imports.
+"""
 from simpy import Environment as SimpyEnvironment
 
 from lib.config import Config

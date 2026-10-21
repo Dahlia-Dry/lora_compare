@@ -1,3 +1,7 @@
+"""Matplotlib/Tk GUI: interactive scenario editor for placing and configuring
+nodes, a live network graph shown while the simulation runs, and a plot of
+the packet transmission schedule.
+"""
 import os
 
 import matplotlib

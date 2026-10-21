@@ -1,3 +1,6 @@
+"""Helper for closing Meshtastic TCP interfaces with a timeout, so a hung
+reader thread cannot block simulator startup or shutdown.
+"""
 import threading
 
 

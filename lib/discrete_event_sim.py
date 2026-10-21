@@ -1,3 +1,7 @@
+"""Discrete-event simulation driver. `DiscreteEventSim` builds the SimPy
+environment and nodes from a config, runs the simulation, and collects
+the statistics reported in `SimulationResults`.
+"""
 import copy
 import logging
 from typing import TYPE_CHECKING

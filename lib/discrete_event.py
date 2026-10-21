@@ -1,3 +1,7 @@
+"""Low-level discrete-event plumbing: `BroadcastPipe`, which delivers packets
+to every node's receive store after their time on air, and `sim_report`
+for writing simulation results to CSV under out/report/.
+"""
 import os
 
 import pandas as pd

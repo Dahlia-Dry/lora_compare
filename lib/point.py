@@ -1,3 +1,4 @@
+"""Simple 3D point type with Euclidean distance, used for node positions."""
 import copy
 
 from numpy import sqrt
