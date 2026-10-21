@@ -7,3 +7,5 @@ simpy==4.1.1
 PyYAML~=6.0.2
 protobuf~=4.25.8
 pydantic~=2.14
+dash~=4.4
+kaleido~=1.5

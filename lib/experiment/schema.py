@@ -123,6 +123,7 @@ class Architecture(Strict):
 class Output(Strict):
     dir: Optional[str] = None  # default: out/<experiment name>
     nodes_csv: bool = True
+    readings_csv: bool = True
     deliveries_csv: bool = True
 
 

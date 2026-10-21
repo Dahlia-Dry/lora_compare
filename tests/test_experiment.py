@@ -173,7 +173,7 @@ class TestRunExperiment(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             raw = dict(BASE, output={"dir": os.path.join(d, "out")})
             out, results = run_experiment(self.write(d, raw), jobs=1)
-            self.assertEqual(sorted(os.listdir(out)), ["deliveries.csv", "experiment.yaml", "nodes.csv", "runs.csv"])
+            self.assertEqual(sorted(os.listdir(out)), ["deliveries.csv", "experiment.yaml", "nodes.csv", "readings.csv", "runs.csv"])
             with open(os.path.join(out, "runs.csv"), encoding="utf-8") as f:
                 rows = list(csv.DictReader(f))
             with open(os.path.join(out, "deliveries.csv"), encoding="utf-8") as f:

@@ -41,6 +41,8 @@ class NodeInfo:
     role: str
     device: str = None
     gateway_site: int = None  # index of the gateway site the node belongs to
+    start_x: float = None  # position at the start of the run
+    start_y: float = None
 
 
 def load_experiment_file(path) -> dict:
@@ -222,6 +224,6 @@ def build_run(run: RunSpec, catalog=None):
                 is_sink=(group_name == "responder")))
         else:
             raise ValueError(f"node type {spec.type!r} is not implemented yet")
-        infos.append(NodeInfo(node_id, group_name, spec.type, spec.role, spec.device, site_index))
+        infos.append(NodeInfo(node_id, group_name, spec.type, spec.role, spec.device, site_index, x, y))
 
     return conf, node_configs, infos

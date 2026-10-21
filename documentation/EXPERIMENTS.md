@@ -55,6 +55,7 @@ sweep:                        # optional: dotted paths into this file, and the v
 output:                       # optional
   dir: out/mesh_b             # default out/<name>
   nodes_csv: true
+  readings_csv: true
   deliveries_csv: true
 ```
 
@@ -99,11 +100,52 @@ Each `sweep` key is a dotted path through mappings in the file, for example `dep
   - Latency: `latency_mean_s`, `latency_p50_s`, `latency_p95_s`, from generation to first reception at a responder.
   - Radio: `packets_sent`, `collisions`, `collision_rate`, `tx_airtime_s`.
   - Energy: `energy_total_J`, `energy_sensors_J`, `energy_gateways_J`, `energy_responders_J`, `energy_per_delivered_J` (total energy divided by readings delivered to any responder), and `energy_missing`.
-- **`nodes.csv`**: one row per node per run, with its group (`sensor`, `gateway`, `responder`), gateway site index, role, device, position, power, packets and airtime sent, readings delivered (responders), and energy in total and per component.
+- **`nodes.csv`**: one row per node per run. It gives the node's group (`sensor`, `gateway`, `responder`), gateway site index, role, device, start position (`x`, `y`) and end position (`end_x`, `end_y`, which differ for moving nodes), power, and packets and airtime sent.
+  - Sensors also get `readings` and `delivery_ratio` (the mean over responders of the fraction of that sensor's readings received). Responders get `delivered`.
+  - Nodes with a device get radio time per state (`radio_rx_s`, `radio_tx_s`, ...) and energy, in total and per component.
+- **`readings.csv`**: one row per reading generated: `seq`, `sensor`, generation time, and `responders_reached`.
 - **`deliveries.csv`**: one row per reading received at a responder: `seq`, `sensor`, `responder`, generation and delivery time, and latency.
 - **`experiment.yaml`**: a copy of the experiment file.
 
 Energy is `NaN` while values in `hardware/components.yaml` are `null`. `energy_missing` lists which ones.
+
+## Viewing results
+
+`viewResults.py` opens a dashboard over one results folder:
+
+```sh
+python3 viewResults.py out/mesh_b                  # http://127.0.0.1:8050
+python3 viewResults.py out/mesh_b --tab energy --theme dark
+```
+
+The filter row applies to every tab:
+- **Architectures:** which ones to show. Each keeps its colour when others are hidden.
+- **X axis:** the swept parameter that the comparison charts vary.
+- **Sweep point:** a value for every swept parameter. Comparison charts hold all other parameters at it; every other chart is drawn at it.
+- **Seeds:** the mean with a 95% confidence interval, or every seed.
+- **Theme:** light or dark.
+
+Below the filters are tiles for delivery (mean and worst responder), p95 latency and energy per delivered reading. The tabs:
+
+| Tab | Shows |
+|---|---|
+| Compare | Delivery, p95 latency, energy per delivered reading and collision rate against the x-axis parameter |
+| Trade-offs | Delivery against a cost (energy per delivered reading, airtime, packets or latency), one path per architecture |
+| Delivery & latency | Share of readings received within time t (which levels off at the delivery ratio), and delivery ratio per responder |
+| Energy | Energy or radio transmit time per run, split by node group or component, and per node |
+| Channel | Share of time each node transmits against the region's duty-cycle limit, collision rate, total airtime |
+| Map | Node positions of one run (pick architecture and seed), sensors shaded by delivery ratio |
+| Timeline | Every reading of that run by sensor and time, marked by how many responders received it |
+| Table | Mean and 95% CI of every metric per architecture and sweep point, sortable and downloadable |
+
+**Export figures** writes every chart for the current selection, in the light theme, as SVG and PDF, plus `summary.csv`. They go to `<results>/figures/<selection>/`. The camera icon on a single chart downloads it as SVG. To export without opening the dashboard:
+
+```sh
+python3 viewResults.py out/mesh_b --export
+python3 viewResults.py out/mesh_b --export --point deployment.sensors.count=30 --formats svg,pdf,png
+```
+
+Static export uses Kaleido, which needs Google Chrome or Chromium installed.
 
 ## Randomness
 
