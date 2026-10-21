@@ -15,8 +15,8 @@ import random
 import matplotlib.pyplot as plt
 
 from lib.core.config import Config
-from lib.core.common import find_random_position, setup_asymmetric_links
-from lib.core.discrete_event import BroadcastPipe, sim_report
+from lib.core.common import find_random_position
+from lib.core.discrete_event import sim_report
 from lib.core.sim import DiscreteEventSim
 from lib.gui import Graph, run_graph_updates
 from lib.mesh.node import NodeConfig

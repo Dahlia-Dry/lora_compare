@@ -403,6 +403,10 @@ class Config:
         self.D0 = 40.0  # PHY parameter
         self.LPLD0 = 127.41  # PHY parameter
         self.NPREAM = 16   # number of preamble symbols from RadioInterface.h
+        # True reproduces upstream Meshtasticator's preamble timing in collision
+        # checks, which compares seconds against ms and so makes the preamble
+        # lock window ~1000x too short. Only for regression tests.
+        self.LEGACY_COLLISION_TIMING = False #seems like there was an error in the collision timing in the original Meshtasticator code
         ### End of PHY parameters ###
 
         # Misc

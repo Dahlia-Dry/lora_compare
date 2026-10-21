@@ -16,8 +16,6 @@ from lib.mesh.node import MeshNode, NodeConfig
 
 if TYPE_CHECKING:
     from lib.gui import Graph
-from lib.mesh.packet import MeshPacket
-from lib.radio.phy import estimate_path_loss
 
 logger = logging.getLogger(__name__)
 
@@ -124,12 +122,8 @@ class DiscreteEventSim:
 
         # set constant state/initial state from parameters
         self.env = SimpyEnvironment()
-        self.conf = copy.deepcopy(conf) # have our own copy so our setup_asymmetric_links doesn't change whatever config we've been passed.
+        self.conf = copy.deepcopy(conf) # have our own copy so the sim never changes the config we were passed.
         self.node_configs = node_configs
-
-        # reset MeshPacket class variables
-        MeshPacket.seed_asym_rng(self.conf.SEED)
-        MeshPacket.reset_packet_counter()
 
         # internal global state which changes
         self.mutated_state = SimulationState(self.conf, self.env)
@@ -160,7 +154,7 @@ class DiscreteEventSim:
             for n in self.mutated_state.nodes:
                 self.graph.add_node(n)
 
-        logger.debug(f"connectivity map: {self.mutated_state.connectivity_map}")
+        logger.debug(f"connectivity map: {self.mutated_state.medium.connectivity_map}")
 
         if self.graph is not None and self.conf.MOVEMENT_ENABLED:
             # NOTE: this does not run under test, since we skip creating a GUI
@@ -191,7 +185,7 @@ class DiscreteEventSim:
 
         first_order_results = {
             "packets": self.mutated_state.packets,
-            "packetsAtN": self.mutated_state.packetsAtN,
+            "packetsAtN": self.mutated_state.medium.packetsAtN,
             "messageSeq": self.mutated_state.messageSeq.peek(),
             "messages": self.data_tracking.messages,
             "delays": self.data_tracking.delays,
@@ -206,31 +200,9 @@ class DiscreteEventSim:
 
     def initialize_connectivity_map(self):
         '''use node configs to compute the initial connectivity map for later
-        lookups. Also, initialize baseline path loss matrix.
+        lookups. Also, initialize baseline path loss matrix and count links.
         '''
-        for tx_node in self.node_configs:
-            # compute the set of all nodes our signal is detectable at
-            reachable_node_set = set()
-            for rx_node in self.node_configs:
-                if tx_node.node_id == rx_node.node_id:
-                    continue # skip self
-
-                self.data_tracking.totalPairs += 1
-
-                (rssi, pl) = tx_node.compute_rssi_and_pathloss_to(rx_node, self.conf)
-
-                # compare with extra margin (set based on 10-node standard test)
-                if rssi + self.conf.CONNECTIVITY_MAP_RSSI_MARGIN > self.conf.current_preset['sensitivity']:
-                    reachable_node_set.add(rx_node.node_id)
-
-                # compute total/no links without margin
-                if rssi >= self.conf.current_preset['sensitivity']:
-                    self.data_tracking.totalLinks += 1
-                else:
-                    self.data_tracking.noLinks += 1
-
-                # cache path loss (it is symmetric, and static until one of the nodes moves)
-                self.mutated_state.baseline_pathloss_matrix[tx_node.node_id][rx_node.node_id] = pl
-                self.mutated_state.baseline_pathloss_matrix[rx_node.node_id][tx_node.node_id] = pl
-
-            self.mutated_state.connectivity_map[tx_node.node_id] = reachable_node_set
+        (totalPairs, totalLinks, noLinks) = self.mutated_state.medium.initialize(self.node_configs)
+        self.data_tracking.totalPairs += totalPairs
+        self.data_tracking.totalLinks += totalLinks
+        self.data_tracking.noLinks += noLinks

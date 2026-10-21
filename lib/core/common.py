@@ -1,6 +1,5 @@
 """Shared helpers used across the simulator: random node placement within
-radio range of existing nodes, distance calculation, and setup of
-asymmetric link offsets between node pairs.
+radio range of existing nodes, and distance calculation.
 """
 import random
 import os
@@ -59,47 +58,3 @@ def find_random_position(conf, node_configs) -> (float, float):
 # TODO: once lib/mesh/interactive no longer uses this, we can remove this and put all distance calculation in Point
 def calc_dist(x0, x1, y0, y1, z0=0, z1=0):
     return np.sqrt(((abs(x0-x1))**2)+((abs(y0-y1))**2)+((abs(z0-z1)**2)))
-
-def setup_asymmetric_links(conf, nodes):
-    """updates conf to populate LINK_OFFSET member to simulate asymmetric links
-    """
-    asymLinkRng = random.Random(conf.SEED)
-    totalPairs = 0
-    symmetricLinks = 0
-    asymmetricLinks = 0
-    noLinks = 0
-    for i in range(conf.NR_NODES):
-        for b in range(conf.NR_NODES):
-            if i != b:
-                if conf.MODEL_ASYMMETRIC_LINKS:
-                    conf.LINK_OFFSET[(i, b)] = asymLinkRng.gauss(conf.MODEL_ASYMMETRIC_LINKS_MEAN, conf.MODEL_ASYMMETRIC_LINKS_STDDEV)
-                else:
-                    conf.LINK_OFFSET[(i, b)] = 0
-
-    for a in range(conf.NR_NODES):
-        for b in range(conf.NR_NODES):
-            if a != b:
-                # Calculate constant RSSI in both directions
-                nodeA = nodes[a]
-                nodeB = nodes[b]
-                distAB = nodeA.position.euclidean_distance(nodeB.position)
-                pathLossAB = phy.estimate_path_loss(conf, distAB, conf.FREQ, nodeA.position.z, nodeB.position.z)
-
-                offsetAB = conf.LINK_OFFSET[(a, b)]
-                offsetBA = conf.LINK_OFFSET[(b, a)]
-
-                rssiAB = conf.PTX + nodeA.antennaGain - pathLossAB - offsetAB
-                rssiBA = conf.PTX + nodeB.antennaGain - pathLossAB - offsetBA
-
-                canAhearB = (rssiAB >= conf.current_preset["sensitivity"])
-                canBhearA = (rssiBA >= conf.current_preset["sensitivity"])
-
-                totalPairs += 1
-                if canAhearB and canBhearA:
-                    symmetricLinks += 1
-                elif canAhearB or canBhearA:
-                    asymmetricLinks += 1
-                else:
-                    noLinks += 1
-
-    return totalPairs, symmetricLinks, asymmetricLinks, noLinks

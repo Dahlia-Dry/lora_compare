@@ -74,7 +74,7 @@ def gen_scenario(conf):
         nx = nodeX[-1]
         ny = nodeY[-1]
         ax.annotate(str(len(nodeX)-1), (nx-5, ny+5))
-        circle = plt.Circle((nx, ny), radius=phy.MAXRANGE, color=plt.cm.Set1(len(nodeX)-1), alpha=0.1)
+        circle = plt.Circle((nx, ny), radius=phy.estimate_max_range(conf, 2 * conf.GL), color=plt.cm.Set1(len(nodeX)-1), alpha=0.1)
         circles.append(circle)
         ax.add_patch(circle)
         ax.scatter(nx, ny) # small dot in the middle
@@ -114,7 +114,7 @@ def gen_scenario(conf):
     button.on_clicked(submit)
 
     def submit_gain(text):
-        circles[-1].set_radius(phy.estimate_max_range(float(text)))
+        circles[-1].set_radius(phy.estimate_max_range(conf, float(text)))
         fig.canvas.draw_idle()
     gain_textbox.on_submit(submit_gain)
 
@@ -218,7 +218,7 @@ class Graph:
         # Plot the coverage circle
         circle = plt.Circle(
             (node.position.x, node.position.y),
-            radius=phy.estimate_max_range(node.antennaGain),
+            radius=phy.estimate_max_range(self.conf, node.antennaGain),
             color=plt.cm.Set1(node.nodeid),
             alpha=0.1
         )

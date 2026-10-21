@@ -47,5 +47,48 @@ class TestPhy(unittest.TestCase):
         self.assertLess(diff, tolerance, message)
 
 
+    def test_airtime(self):
+        from types import SimpleNamespace
+        conf = SimpleNamespace(NPREAM=8)
+
+        # Semtech LoRa calculator: SF7, 125 kHz, CR 4/5, 8-symbol preamble,
+        # explicit header, CRC on, 20 bytes -> 56.576 ms
+        self.assertAlmostEqual(lib.radio.phy.airtime(conf, 7, 1, 20, 125e3, 0), 56.576, places=3)
+
+        # the header length is added to the payload
+        self.assertEqual(lib.radio.phy.airtime(conf, 9, 1, 10, 125e3, 10),
+                         lib.radio.phy.airtime(conf, 9, 1, 20, 125e3, 0))
+
+    def test_frequency_collision(self):
+        from types import SimpleNamespace
+        def tx(freq, bw=125e3):
+            return SimpleNamespace(freq=freq, bw=bw)
+
+        self.assertTrue(lib.radio.phy.frequency_collision(tx(868.1e6), tx(868.1e6)), "same channel")
+        self.assertTrue(lib.radio.phy.frequency_collision(tx(868.1e6), tx(868.12e6)), "20 kHz apart at 125 kHz")
+        self.assertFalse(lib.radio.phy.frequency_collision(tx(868.1e6), tx(868.3e6)), "adjacent EU868 channels")
+        self.assertTrue(lib.radio.phy.frequency_collision(tx(869.5e6, 250e3), tx(869.55e6)), "50 kHz apart, one at 250 kHz")
+        self.assertTrue(lib.radio.phy.frequency_collision(tx(869.5e6), tx(869.6e6, 500e3)), "100 kHz apart, one at 500 kHz")
+        self.assertFalse(lib.radio.phy.frequency_collision(tx(868.5e6), tx(869.525e6, 250e3)), "LoRaWAN vs Meshtastic EU868")
+
+    def test_timing_collision_preamble_window(self):
+        from types import SimpleNamespace
+        conf = SimpleNamespace(NPREAM=16, LEGACY_COLLISION_TIMING=False)
+        env = SimpleNamespace(now=1000.0)
+        # SF11 at 250 kHz: 8.192 ms symbols, so the new packet locks on after
+        # (16 - 5) symbols = 90.1 ms
+        new = SimpleNamespace(sf=11, bw=250e3)
+        ends_within_window = SimpleNamespace(endTime=1050.0)
+        ends_after_window = SimpleNamespace(endTime=1100.0)
+
+        self.assertFalse(lib.radio.phy.timing_collision(conf, env, new, ends_within_window),
+                         "old packet ends before the new one's preamble locks")
+        self.assertTrue(lib.radio.phy.timing_collision(conf, env, new, ends_after_window))
+
+        conf.LEGACY_COLLISION_TIMING = True
+        self.assertTrue(lib.radio.phy.timing_collision(conf, env, new, ends_within_window),
+                        "legacy timing treats the window as ~0.09 ms")
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -4,7 +4,7 @@ data tracking) split out of lib.core.sim to avoid circular imports.
 from simpy import Environment as SimpyEnvironment
 
 from lib.core.config import Config
-from lib.core.discrete_event import BroadcastPipe
+from lib.radio.medium import RadioMedium
 
 # This is where we put components of DiscreteEventSim that need to be referenced
 # by other classes, to avoid circular imports
@@ -41,17 +41,14 @@ class SimulationState:
         """Constructor
 
         Arguments:
-        conf -- Config object of global sim constants. Only used for NR_NODES.
-        env -- SimPy Environment for simulation. Required for internal BroadcastPipe.
+        conf -- Config object of global sim constants.
+        env -- SimPy Environment for simulation.
         """
         self.env = env
-        self.bc_pipe = BroadcastPipe(self.env)
+        self.medium = RadioMedium(conf, env)
+        self.nodes = self.medium.nodes  # all nodes, indexed by node ID
         self.packets = [] # used mostly for data tracking, but also for state
-        self.packetsAtN = [[] for _ in range(conf.NR_NODES)]
         self.messageSeq = Counter()
-        self.nodes = []
-        self.connectivity_map = {} # node_id -> set of nodes which can hear it. (list would be faster for lookup)
-        self.baseline_pathloss_matrix = [[None for _ in range(conf.NR_NODES)] for _ in range(conf.NR_NODES)] # cache for later lookup
 
 class SimulationDataTracking:
     """Class to hold data used to monitor a simulation which has no

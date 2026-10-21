@@ -1,4 +1,4 @@
-"""Low-level discrete-event plumbing: `BroadcastPipe`, which delivers packets
+"""Low-level discrete-event stuff: `BroadcastPipe`, which delivers packets
 to every node's receive store after their time on air, and `sim_report`
 for writing simulation results to CSV under out/report/.
 """

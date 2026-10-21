@@ -211,6 +211,11 @@ class TestDiscreteEventSim(unittest.TestCase):
         from lib.core.config import CONFIG
         conf = CONFIG
 
+        # These reference values come from upstream Meshtasticator, so keep
+        # its (buggy) preamble timing in collision checks.
+        conf.LEGACY_COLLISION_TIMING = True
+        self.addCleanup(setattr, conf, "LEGACY_COLLISION_TIMING", False)
+
         # crucial!! and perhaps a tad fragile
         random.seed(conf.SEED)
 
@@ -283,6 +288,29 @@ class TestDiscreteEventSim(unittest.TestCase):
 
         gpsEnabled = results['gpsEnabled']
         self.assertEqual(gpsEnabled, 1, "expected number of nodes with GPS")
+
+    def test_discrete_sim_ten_nodes_fixed_timing(self):
+        """Reference run with the corrected preamble timing (the default).
+        Same scenario as test_discrete_sim_ten_nodes."""
+        from lib.mesh.node import default_generate_node_list
+        from lib.core.config import Config
+
+        conf = Config()
+        self.assertFalse(conf.LEGACY_COLLISION_TIMING, "corrected timing is the default")
+        random.seed(conf.SEED)
+        conf.NR_NODES = 10
+        conf.update_router_dependencies()
+        nodeConfig = default_generate_node_list(conf)
+
+        sim = lib.core.sim.DiscreteEventSim(conf, nodeConfig)
+        sim.run_simulation()
+        results = sim.get_results()
+
+        self.assertEqual(results['sent'], 840, "expected number of packets sent")
+        self.assertEqual(results['nrCollisions'], 347, "expected number of collisions")
+        self.assertEqual(results['nrReceived'], 2515, "expected number of packets received")
+        self.assertEqual(round(results['nodeReach'] * 100, 2), 77.41, "expected rounded percentage of nodes reached")
+        self.assertEqual(round(results['meanDelay'], 2), 6224.74, "expected rounded delay average")
 
     def test_sim_does_not_change_config(self):
         import copy

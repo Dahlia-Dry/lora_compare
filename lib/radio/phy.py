@@ -1,16 +1,10 @@
-"""Physical layer model: LoRa airtime, slot time, channel activity detection,
+"""Physical layer model: LoRa airtime, slot time,
 collision checks (frequency, spreading factor, power, timing), path loss
 models and maximum range estimation.
 """
 import logging
 import math
 import random
-
-from lib.core.config import CONFIG
-
-# TODO: if our config deviates from the default, we WILL get incorrect results.
-# refactor things to take a config object
-conf = CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +13,7 @@ NUM_SYM_CAD = 2
 NUM_SYM_CAD_24GHZ = 4
 
 #                           CAD duration   +     airPropagationTime+TxRxTurnaround+MACprocessing
-def get_current_slot_time(): # from RadioInterface::computeSlotTimeMsec
+def get_current_slot_time(conf): # from RadioInterface::computeSlotTimeMsec
     # all times in ms
     sum_prop_turnaround_mac_time = 0.2 + 0.4 + 7
     firmware_bw = conf.current_preset["bw"] / 1000 # convert Hz to KHz to match firmware
@@ -58,11 +52,16 @@ def check_collision(conf, env, packet, rx_nodeId, packetsAtN):
 
 
 def frequency_collision(p1, p2):
-    if abs(p1.freq - p2.freq) <= 120 and (p1.bw == 500 or p2.freq == 500):
+    """True if the two transmissions' centre frequencies are close enough to
+    interfere: within 120/60/30 kHz when either uses 500/250/125 kHz bandwidth.
+    Frequencies and bandwidths are in Hz.
+    """
+    delta = abs(p1.freq - p2.freq)
+    if delta <= 120e3 and (p1.bw == 500e3 or p2.bw == 500e3):
         return True
-    elif abs(p1.freq - p2.freq) <= 60 and (p1.bw == 250 or p2.freq == 250):
+    elif delta <= 60e3 and (p1.bw == 250e3 or p2.bw == 250e3):
         return True
-    elif abs(p1.freq - p2.freq) <= 30:
+    elif delta <= 30e3:
         return True
     return False
 
@@ -88,26 +87,20 @@ def timing_collision(conf, env, p1, p2):
     """ assuming p1 is the freshly arrived packet, check if the packet collides 
         or not (when only the first n - 5 preamble symbols overlap)
     """
-    Tpreamb = 2 ** p1.sf / (1.0 * p1.bw) * (conf.NPREAM - 5)
+    Tpreamb = 2 ** p1.sf / (1.0 * p1.bw) * (conf.NPREAM - 5)  # in seconds
+    if not conf.LEGACY_COLLISION_TIMING:
+        Tpreamb *= 1000  # sim time is in ms
     p1_cs = env.now + Tpreamb
     if p1_cs < p2.endTime:  # p1 collided with p2 and lost
         return True
     return False
 
 
-def is_channel_active(node, env):
-    if random.randrange(10) <= node.conf.INTERFERENCE_LEVEL * 10:
-        return True
-    for p in node.packets:
-        if p.detectedByN[node.nodeid]:
-            # You will miss detecting a packet if it has just started before you could do CAD
-            if p.startTime + get_current_slot_time() <= env.now <= p.endTime:
-                return True
-    return False
-
-
-def airtime(conf, sf, cr, pl, bw):
-    pl = pl + conf.HEADERLENGTH  # add Meshtastic header length
+def airtime(conf, sf, cr, pl, bw, header_len):
+    """Time on air in ms of a packet with `pl` payload bytes plus a
+    `header_len`-byte protocol header, at bandwidth `bw` in Hz.
+    """
+    pl = pl + header_len
     H = 0  # implicit header disabled (H=0) or not (H=1)
     DE = 0  # low data rate optimization enabled (=1) or not (=0)
 
@@ -196,11 +189,6 @@ def estimate_path_loss(conf, dist, freq, txZ=None, rxZ=None, model=None):
     return Lpl
 
 
-# TODO: take conf as parameter so we don't use this module's default conf
-def zero_link_budget(dist):
-    return conf.PTX + 2 * conf.GL - estimate_path_loss(conf, dist, conf.FREQ) - conf.current_preset["sensitivity"]
-
-
 def rootFinder(func, x0, args=(), tol=1, maxiter=100):
   """Newton-Raphson root finder."""
   x = x0
@@ -217,12 +205,9 @@ def rootFinder(func, x0, args=(), tol=1, maxiter=100):
   print("Warning: could not estimate max. range")
   return x
 
-# TODO: take conf as parameter so we don't use this module's default conf
-def zero_link_budget_with_gain(dist, gain):
+def zero_link_budget_with_gain(dist, conf, gain):
     return conf.PTX + gain - estimate_path_loss(conf, dist, conf.FREQ) - conf.current_preset["sensitivity"]
 
-def estimate_max_range(gain):
-    return rootFinder(zero_link_budget_with_gain, 1500, args=(gain,))
-
-# TODO: take conf as parameter so we don't use this module's default conf
-MAXRANGE = rootFinder(zero_link_budget, 1500)
+def estimate_max_range(conf, gain):
+    """Distance in m at which the link budget reaches zero, for a total antenna gain `gain` in dBi."""
+    return rootFinder(zero_link_budget_with_gain, 1500, args=(conf, gain))
