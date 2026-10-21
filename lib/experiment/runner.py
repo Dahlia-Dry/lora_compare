@@ -1,0 +1,190 @@
+"""Run the simulations of an experiment and write the results:
+  runs.csv        one row per run (architecture x sweep point x seed)
+  nodes.csv       one row per node per run
+  deliveries.csv  one row per reading delivered to a responder
+  experiment.yaml a copy of the experiment file
+"""
+import csv
+import math
+import os
+import random
+import shutil
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from dataclasses import dataclass
+
+import numpy as np
+
+from lib.core.sim import DiscreteEventSim
+from lib.energy.profiles import load_hardware
+from lib.experiment.loader import GROUPS, RunSpec, build_run, load_experiment_file, plan_runs
+
+
+@dataclass
+class RunResult:
+    row: dict
+    nodes: list
+    deliveries: list
+
+
+def _mean(values):
+    return float(np.mean(values)) if len(values) else math.nan
+
+
+def _percentile(values, q):
+    return float(np.percentile(values, q)) if len(values) else math.nan
+
+
+def run_one(run: RunSpec, graph=None) -> RunResult:
+    """Simulate one run and summarise it."""
+    exp = run.experiment
+    catalog = load_hardware(exp.hardware)
+    conf, node_configs, infos = build_run(run, catalog)
+
+    random.seed(run.seed)  # MAC delays, collisions and interference use the global RNG
+    sim = DiscreteEventSim(conf, node_configs, graph)
+    sim.run_simulation()
+    results = sim.get_results()
+    nodes = results["nodes"]
+
+    readings = {r["seq"]: r for r in results["readings"]}
+    deliveries = [dict(d) for d in results["deliveries"] if d["seq"] in readings]
+    responders = [i.node_id for i in infos if i.group == "responder"]
+    by_responder = {r: 0 for r in responders}
+    for d in deliveries:
+        by_responder[d["responder"]] += 1
+    ratios = [count / len(readings) for count in by_responder.values()] if readings else []
+    delivered_any = {d["seq"] for d in deliveries}
+    latencies = [(d["delivered_time"] - d["gen_time"]) / 1000 for d in deliveries]
+
+    energy = results["energy"]
+    energy_by_group = {g: 0.0 for g in GROUPS}
+    for info in infos:
+        if info.node_id in energy:
+            energy_by_group[info.group] += energy[info.node_id]["total_mJ"]
+    energy_total = sum(r["total_mJ"] for r in energy.values()) if energy else math.nan
+    missing = sorted({m for r in energy.values() for m in r["missing"]})
+
+    count = {g: sum(1 for i in infos if i.group == g) for g in GROUPS}
+    row = {
+        "run_id": run.run_id,
+        "architecture": run.architecture,
+        "seed": run.seed,
+        **run.sweep_point,
+        "sensors": count["sensor"],
+        "gateway_nodes": count["gateway"],
+        "responders": count["responder"],
+        "readings": len(readings),
+        "delivery_ratio_mean": _mean(ratios),
+        "delivery_ratio_min": min(ratios) if ratios else math.nan,
+        "delivery_ratio_any": len(delivered_any) / len(readings) if readings and responders else math.nan,
+        "latency_mean_s": _mean(latencies),
+        "latency_p50_s": _percentile(latencies, 50),
+        "latency_p95_s": _percentile(latencies, 95),
+        "packets_sent": results["sent"],
+        "collisions": results["nrCollisions"],
+        "collision_rate": results["collisionRate"],
+        "tx_airtime_s": sum(n.txAirUtilization for n in nodes) / 1000,
+        "energy_total_J": energy_total / 1000,
+        "energy_sensors_J": energy_by_group["sensor"] / 1000 if energy else math.nan,
+        "energy_gateways_J": energy_by_group["gateway"] / 1000 if energy else math.nan,
+        "energy_responders_J": energy_by_group["responder"] / 1000 if energy else math.nan,
+        "energy_per_delivered_J": energy_total / 1000 / len(delivered_any) if energy and delivered_any else math.nan,
+        "energy_missing": " ".join(missing),
+    }
+
+    node_rows = []
+    for info, node in zip(infos, nodes):
+        report = energy.get(node.nodeid)
+        node_row = {
+            "run_id": run.run_id,
+            "node_id": node.nodeid,
+            "group": info.group,
+            "gateway_site": "" if info.gateway_site is None else info.gateway_site,
+            "type": info.type,
+            "role": info.role,
+            "device": info.device or "",
+            "x": round(node.node_conf.position.x, 1),
+            "y": round(node.node_conf.position.y, 1),
+            "z": node.node_conf.position.z,
+            "tx_dbm": node.node_conf.tx_power,
+            "gain_dbi": node.node_conf.antenna_gain,
+            "moving": node.isMoving,
+            "packets_sent": node.nrPacketsSent,
+            "tx_airtime_s": node.txAirUtilization / 1000,
+            "delivered": by_responder.get(node.nodeid, ""),
+            "energy_J": report["total_mJ"] / 1000 if report else "",
+        }
+        if report:
+            for comp, comp_report in report["components"].items():
+                node_row[f"energy_{comp}_J"] = comp_report["total_mJ"] / 1000
+        node_rows.append(node_row)
+
+    delivery_rows = [{
+        "run_id": run.run_id,
+        "seq": d["seq"],
+        "sensor": d["sensor"],
+        "responder": d["responder"],
+        "gen_time_s": d["gen_time"] / 1000,
+        "delivered_time_s": d["delivered_time"] / 1000,
+        "latency_s": (d["delivered_time"] - d["gen_time"]) / 1000,
+    } for d in deliveries]
+
+    return RunResult(row, node_rows, delivery_rows)
+
+
+def write_csv(path, rows):
+    columns = []
+    for row in rows:
+        for key in row:
+            if key not in columns:
+                columns.append(key)
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=columns, restval="")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def output_dir(exp) -> str:
+    return exp.output.dir or os.path.join("out", exp.name)
+
+
+def run_experiment(experiment_path, architectures=None, jobs=1, on_result=None) -> tuple:
+    """Plan, run and write every run of an experiment file.
+
+    Arguments:
+    experiment_path -- path of the experiment YAML
+    architectures -- only run these architectures. Default: all
+    jobs -- number of runs to simulate in parallel
+    on_result -- called with (RunResult, number done, number of runs) after each run
+
+    Returns:
+    (output directory, list of RunResult in run order)
+    """
+    runs = plan_runs(load_experiment_file(experiment_path), architectures)
+    out = output_dir(runs[0].experiment)
+    os.makedirs(out, exist_ok=True)
+    shutil.copyfile(experiment_path, os.path.join(out, "experiment.yaml"))
+
+    results = [None] * len(runs)
+    if jobs <= 1:
+        for i, run in enumerate(runs):
+            results[run.run_id] = run_one(run)
+            if on_result:
+                on_result(results[run.run_id], i + 1, len(runs))
+    else:
+        with ProcessPoolExecutor(max_workers=jobs) as pool:
+            futures = {pool.submit(run_one, run): run.run_id for run in runs}
+            done = 0
+            for future in as_completed(futures):
+                results[futures[future]] = future.result()
+                done += 1
+                if on_result:
+                    on_result(results[futures[future]], done, len(runs))
+
+    exp_output = runs[0].experiment.output
+    write_csv(os.path.join(out, "runs.csv"), [r.row for r in results])
+    if exp_output.nodes_csv:
+        write_csv(os.path.join(out, "nodes.csv"), [n for r in results for n in r.nodes])
+    if exp_output.deliveries_csv:
+        write_csv(os.path.join(out, "deliveries.csv"), [d for r in results for d in r.deliveries])
+    return out, results

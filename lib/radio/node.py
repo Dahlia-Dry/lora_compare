@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 class RadioNodeConfig:
     """Radio configuration of a node."""
-    def __init__(self, node_id: int, position: Point, tx_power: int, freq: float, antenna_gain: float = 0, device=None):
+    def __init__(self, node_id: int, position: Point, tx_power: int, freq: float, antenna_gain: float = 0, device=None,
+                 speed_m_per_min: float = None, gps: bool = False):
         """Arguments:
         node_id -- unique integer id of node (used as list index)
         position -- beginning Point(x, y, z) location of node
@@ -25,6 +26,9 @@ class RadioNodeConfig:
         freq -- frequency in Hz
         antenna_gain -- antenna gain in dBi. Default 0
         device -- hardware Device for energy accounting. Default None: no energy metering
+        speed_m_per_min -- random-walk step size; 0 for a static node. Default None: decided
+                           at random from Config.APPROX_RATIO_NODES_MOVING (legacy behaviour)
+        gps -- whether a moving node has GPS. Only used when speed_m_per_min is set
         """
         self.node_id = node_id
         self.position = position.copy()  # make sure we keep our own point
@@ -32,6 +36,8 @@ class RadioNodeConfig:
         self.freq = freq
         self.antenna_gain = antenna_gain
         self.device = device
+        self.speed_m_per_min = speed_m_per_min
+        self.gps = gps
 
     def compute_rssi_and_pathloss_to(self, rx_nodeconf, conf) -> (float, float):
         """Compute RSSI and pathloss from this node config as the transmitting node
@@ -76,7 +82,9 @@ class RadioNode:
         self.nodes = self.medium.nodes
         self.packetsAtN = self.medium.packetsAtN
 
-        self.moveRng = random.Random(self.nodeid)
+        # per-node RNG seed: the node ID, salted with the run's seed when Config.NODE_RNG_SEED is set
+        self.rng_seed = self.nodeid if conf.NODE_RNG_SEED is None else f"{conf.NODE_RNG_SEED}:{self.nodeid}"
+        self.moveRng = random.Random(self.rng_seed)
 
         self.nrPacketsSent = 0
         self.isReceiving = []
@@ -159,7 +167,17 @@ class RadioNode:
         raise NotImplementedError
 
     def maybe_start_mobility(self):
-        """Decide (from this node's RNG) whether it moves and has GPS, and start moving if so."""
+        """Start moving if the node config says so. Without an explicit speed in
+        the config, decide at random (from this node's RNG) whether it moves and has GPS."""
+        speed = getattr(self.node_conf, "speed_m_per_min", None)
+        if speed is not None:
+            if speed > 0:
+                self.isMoving = True
+                self.gpsEnabled = self.node_conf.gps
+                self.movementStepSize = speed
+                self.env.process(self.move_node())
+            return
+
         if self.conf.MOVEMENT_ENABLED and self.moveRng.random() <= self.conf.APPROX_RATIO_NODES_MOVING:
             self.isMoving = True
             if self.moveRng.random() <= self.conf.APPROX_RATIO_OF_NODES_MOVING_W_GPS_ENABLED:

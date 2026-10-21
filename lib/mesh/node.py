@@ -64,13 +64,14 @@ class MeshNodeStats:
 class NodeConfig(RadioNodeConfig):
     """Specific configuration for a Meshtastic node
     """
-    def __init__(self, node_id: int, position: Point, period: int, tx_power: int, freq: float, role: MESHTASTIC_ROLE = MESHTASTIC_ROLE.CLIENT, antenna_gain: float = 0, hop_limit: int = 3, neighbor_info: bool = False, device=None):
+    def __init__(self, node_id: int, position: Point, period: int, tx_power: int, freq: float, role: MESHTASTIC_ROLE = MESHTASTIC_ROLE.CLIENT, antenna_gain: float = 0, hop_limit: int = 3, neighbor_info: bool = False, device=None,
+                 speed_m_per_min: float = None, gps: bool = False, is_sink: bool = False):
         """Initial configuration of a node
 
         Arguments:
         node_id -- unique integer id of node (used as list index)
         position -- beginning Point(x, y, z) location of node
-        period -- how often to generate messages. Average of an exponential distribution.
+        period -- how often to generate messages. Average of an exponential distribution. None: generate no traffic
         tx_power -- transmit power in dB
         freq -- frequency in Hz
         role -- Meshtastic firmware role. Default: CLIENT
@@ -78,49 +79,15 @@ class NodeConfig(RadioNodeConfig):
         hop_limit -- hop limit. Default 3
         neighbor_info -- if neighbor info is enabled. Default False
         device -- hardware Device for energy accounting. Default None
+        speed_m_per_min, gps -- mobility, see RadioNodeConfig
+        is_sink -- log readings this node receives as deliveries (responder). Default False
         """
-        super().__init__(node_id, position, tx_power, freq, antenna_gain, device)
+        super().__init__(node_id, position, tx_power, freq, antenna_gain, device, speed_m_per_min, gps)
         self.period = period
+        self.is_sink = is_sink
         self.role = role
         self.hop_limit = hop_limit
         self.neighbor_info = neighbor_info
-
-    @classmethod
-    def from_gen_scenario_output(cls, node_id: int, node_dict: {}, period: int, tx_power: int, freq: float):
-        """create NodeConfig from a node dict as returned from gen_scenario.
-        You probably want to iterate over the keys that function gives you
-        and pass individual values indexed by them to this method.
-
-        Arguments:
-        node_dict -- dictionary defining a single node. From gen_scenario.
-        period -- how often to generate messages. Average of an exponential distribution.
-        tx_power -- transmit power in dB
-        freq -- frequency in Hz
-        """
-        nd = node_dict
-        position = Point(nd['x'], nd['y'], nd['z'])
-
-        # roles
-        isRouter = nd['isRouter']
-        isRepeater = nd['isRepeater']
-        isClientMute = nd['isClientMute']
-
-        # sanity check that only one role is set
-        if (isRouter and isRepeater) or \
-           (isRepeater and isClientMute) or \
-           (isClientMute and isRouter):
-           raise Exception(f"invalid combination of roles: {nd}")
-
-        if isRouter:
-            role = MESHTASTIC_ROLE.ROUTER
-        elif isRepeater:
-            role = MESHTASTIC_ROLE.REPEATER
-        elif isClientMute:
-            role = MESHTASTIC_ROLE.CLIENT_MUTE
-        else:
-            role = MESHTASTIC_ROLE.CLIENT
-
-        return NodeConfig(node_id, position, period, tx_power, freq, role, nd['antennaGain'], nd['hopLimit'], nd['neighborInfo'])
 
 class MeshNode(RadioNode):
     """Class containing all the particular state of a MeshNode, references to necessary
@@ -139,7 +106,7 @@ class MeshNode(RadioNode):
         super().__init__(conf, sim_state, nodeConfig)
 
         # set up internal RNGs
-        self.nodeRng = random.Random(self.nodeid)
+        self.nodeRng = random.Random(self.rng_seed)
         self.rebroadcastRng = random.Random()
 
         self.role = self.node_conf.role
@@ -154,6 +121,10 @@ class MeshNode(RadioNode):
 
         self.delays = data_tracking.delays
         self.messages = data_tracking.messages
+        self.readings = data_tracking.readings
+        self.deliveries = data_tracking.deliveries
+        self.is_sink = getattr(self.node_conf, "is_sink", False)
+        self.delivered = set()  # message seqs already logged as delivered here
 
         self.timesReceived = {}
         self.usefulPackets = 0
@@ -170,7 +141,7 @@ class MeshNode(RadioNode):
         self.prevTxAirUtilization = 0.0   # how much total tx air-time had been used at last sample
 
         self.env.process(self.track_channel_utilization())
-        if not self.is_repeater:  # repeaters don't generate messages themselves
+        if not self.is_repeater and self.period is not None:  # repeaters don't generate messages themselves
             self.env.process(self.generate_message())
         self.start_receiving()
         self.transmitter = simpy.Resource(self.env, 1)
@@ -284,6 +255,7 @@ class MeshNode(RadioNode):
                     destId = NODENUM_BROADCAST
 
                 p = self.send_packet(destId)
+                self.readings.append({"seq": p.seq, "sensor": self.nodeid, "gen_time": self.env.now})
 
                 while p.wantAck:  # ReliableRouter: retransmit message if no ACK received after timeout
                     retransmissionMsec = get_retransmission_msec(self, p)
@@ -345,6 +317,11 @@ class MeshNode(RadioNode):
 
         # Update history of received packets
         self.was_seen_recently(p)
+
+        if self.is_sink and not p.isAck and p.seq not in self.delivered:
+            self.delivered.add(p.seq)
+            self.deliveries.append({"seq": p.seq, "sensor": p.origTxNodeId, "responder": self.nodeid,
+                                    "gen_time": p.genTime, "delivered_time": self.env.now})
 
         # check if implicit ACK for own generated message
         if p.origTxNodeId == self.nodeid:

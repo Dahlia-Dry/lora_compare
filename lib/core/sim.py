@@ -194,6 +194,8 @@ class DiscreteEventSim:
             "messageSeq": self.mutated_state.messageSeq.peek(),
             "messages": self.data_tracking.messages,
             "delays": self.data_tracking.delays,
+            "readings": self.data_tracking.readings,
+            "deliveries": self.data_tracking.deliveries,
             "totalPairs": self.data_tracking.totalPairs,
             "noLinks": self.data_tracking.noLinks,
             "nodes": self.mutated_state.nodes,

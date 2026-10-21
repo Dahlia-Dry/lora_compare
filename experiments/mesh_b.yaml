@@ -1,0 +1,39 @@
+# Architecture B (Meshtastic only): sensors broadcast readings over the mesh,
+# routers at the gateway sites relay, and walking handhelds receive them.
+# Architectures A and C are added to this file once LoRaWAN is implemented.
+#
+#   python3 runExperiment.py experiments/mesh_b.yaml --dry-run
+#   python3 runExperiment.py experiments/mesh_b.yaml --jobs 4
+
+name: mesh_b
+seeds: [1, 2, 3]
+simtime_s: 3600
+
+phy:
+  region: EU_868
+  modem_preset: LONG_FAST
+  pathloss_model: 5            # 3GPP suburban macro
+  asymmetric_links: {enabled: true, stddev_db: 2}
+
+deployment:
+  area_m: [6000, 6000]
+  min_dist_m: 10
+  sensors:       {count: 30}
+  gateway_sites: {positions: [[0, 0], [-1800, 1200], [1800, -1200]]}
+  responders:    {count: 3, mobility: walking}
+
+traffic:
+  reading_period_s: 900
+  payload_bytes: 12
+
+architectures:
+  B:
+    sensor:    {type: mesh_node, role: SENSOR, device: rak4631}
+    gateway:   [{type: mesh_node, role: ROUTER, device: rak4631, gain_dbi: 3, height_m: 2}]
+    responder: {type: mesh_node, role: CLIENT, device: t_echo}
+
+sweep:
+  deployment.sensors.count: [10, 30]
+
+output:
+  dir: out/mesh_b

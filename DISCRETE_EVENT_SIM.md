@@ -5,40 +5,14 @@ The discrete-event simulator mimics the radio section of the device software. It
 Please `git clone` or download this repository, navigate to the Meshtasticator folder (optionally create a virtual environment) and install the necessary requirements using:
 ```pip install -r requirements.txt```.
 
-To start one simulation with the default configurations, run:
+Simulations are defined as experiments in YAML and run with `runExperiment.py`:
 
-```python3 loraMesh.py [nr_nodes]```
+```python3 runExperiment.py experiments/mesh_b.yaml```
 
-If no argument is given, you first have to place the nodes on a plot. After you place a node, you can change its [role](https://meshtastic.org/docs/settings/config/device#role), hopLimit, height (elevation) and antenna gain. These settings will automatically save when you place a new node or when you start the simulation.
-
-![](/img/configNode.png)
-
-If the number of nodes is given, it will randomly place nodes in the area. It makes sure that each node can reach at least one other node. Furthermore, all nodes are placed at a configurable minimum distance (MINDIST) from each other.
-
-For non-interactive smoke tests or CI runs, pass `--no-gui` together with either a node count or `--from-file`. This skips the Tk/Matplotlib placement graph and the final schedule plot while keeping the simulation logic unchanged:
-
-```python3 loraMesh.py 10 --no-gui```
-
-Short deterministic smoke runs can also override the configured duration and message period from the command line:
-
-```python3 loraMesh.py 2 --no-gui --simtime-seconds 5 --period-seconds 0.5```
-
-If you placed the nodes yourself, after a simulation the number of nodes, their coordinates and configuration are automatically saved and you can rerun the scenario with:
-
- ```python3 loraMesh.py --from-file```
-
-If you want to change any of the configurations, adapt the file *out/nodeConfig.yaml* before running it with the above command.
-
-For running multiple repetitions of simulations for a set of parameters, e.g. the number of nodes, run:
-
-```python3 batchSim.py```
-
-After the simulations are done, it plots relevant metrics obtained from the simulations. It saves these metrics in */out/report/* to analyze them later on. See *plotExample.py* for an example Python script to plot the results.
-
-To simulate different parameters, you will have to change the *batchSim.py* script yourself.
+An experiment describes the deployment (sensors, gateway sites and responders), the traffic, and the network architectures to simulate on it. It can sweep parameters and repeat each run over several seeds. Results are written as CSV files to `out/<experiment name>/`. See [documentation/EXPERIMENTS.md](documentation/EXPERIMENTS.md) for the file format and the outputs.
 
 ## Custom configurations
-Here we list some of the configurations, which you can change to model your scenario in */lib/core/config.py*. These apply to all nodes, except those that you configure per node when using the plot.
+Here we list some of the configurations, which you can change to model your scenario in */lib/core/config.py*. An experiment file sets some of them per experiment (region, modem preset, path loss model, asymmetric links, area, traffic) and per node (power, gain, height, role); see [documentation/EXPERIMENTS.md](documentation/EXPERIMENTS.md).
 ### Modem
 The LoRa modem ([see Meshtastic radio settings](https://meshtastic.org/docs/overview/radio-settings#predefined-channels)) that is used, as defined below:
 |Modem  | Name | Bandwidth (kHz) | Coding rate | Spreading Factor | Data rate (kbps)

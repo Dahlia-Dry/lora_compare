@@ -309,8 +309,6 @@ class Config:
         self.REGION = self.regions["US"]  # Select a different region here
         self.CHANNEL_NUM = 27  # Channel number
 
-        self.GUI_ENABLED = True # whether to update/save the Tk/Matplotlib node-placement graph during CLI simulation
-        self.PLOT = True # whether to plot the time schedule of packets after the simulation
         ### End of discrete-event specific ###
 
         ### PHY parameters (normally no change needed) ###
@@ -419,6 +417,9 @@ class Config:
 
         # Misc
         self.SEED = 44  # random seed to use
+        # Seed for per-node RNGs (message timing, movement). None: seed each
+        # node with its ID only, so they do not change with SEED (legacy).
+        self.NODE_RNG_SEED = None
         # End of misc
 
         # Initializers
